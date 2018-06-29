@@ -29,8 +29,6 @@ composer.lock
 /admin-dev/autoupgrade/*
 /admin-dev/backups/*
 /admin-dev/import/*
-
-/themes/*/cache/*
 /admin-dev/themes/*/cache/*
 
 # Config
@@ -38,7 +36,7 @@ composer.lock
 /config/settings.inc.php
 /config/settings.old.php
 /config/xml/*
-/!config/xml/themes/default.xml
+!/config/xml/themes/default.xml
 
 /config/defines_custom.inc.php
 /config/settings_custom.inc.php
@@ -47,6 +45,7 @@ composer.lock
 
 /modules/*
 /override/*
+/themes/community-theme-default/*
 
 /admin-dev/themes/default/sass/ie.sass
 /admin-dev/themes/default/sass/print.sass
@@ -59,13 +58,7 @@ composer.lock
 
 /translations/*
 /mails/*
-/!mails/en/
-/themes/community-theme-default/lang/*
-/themes/community-theme-default/modules/*/translations/*.php
-/themes/community-theme-default/mails/*
-/!themes/community-theme-default/mails/en/
-/themes/community-theme-default/modules/*/mails/*
-/!themes/community-theme-default/modules/*/mails/en
+!/mails/en/*
 
 # MISC
 

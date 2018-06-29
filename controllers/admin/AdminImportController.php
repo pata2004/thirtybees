@@ -1494,15 +1494,15 @@ class AdminImportControllerCore extends AdminController
                     $this->warnings[] = sprintf($this->l('Unable to delete category from table `%s`'), 'category');
                 }
                 try {
-                    Db::getInstance()->execute(
+                    Db::getInstance()->delete(
                         'category_lang',
                         '`id_category` NOT IN ('.(int) Configuration::get('PS_HOME_CATEGORY').', '.(int) Configuration::get('PS_ROOT_CATEGORY').')'
                     );
                 } catch (PrestaShopException $e) {
-                    $this->warnings[] = sprintf($this->l('Unable to delete category from table `%s`'), 'categor_lang');
+                    $this->warnings[] = sprintf($this->l('Unable to delete category from table `%s`'), 'category_lang');
                 }
                 try {
-                    Db::getInstance()->execute(
+                    Db::getInstance()->delete(
                         'category_shop',
                         '`id_category` NOT IN ('.(int) Configuration::get('PS_HOME_CATEGORY').', '.(int) Configuration::get('PS_ROOT_CATEGORY').')'
                     );

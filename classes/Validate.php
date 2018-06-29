@@ -1383,12 +1383,32 @@ class ValidateCore
      *
      * @return bool Validity is ok or not
      *
-     * @since   1.0.0
-     * @version 1.0.0 Initial version
+     * @deprecated Use the generally safer JSON format instead of serialize().
+     *
+     * @since      1.0.0
+     * @version    1.0.0 Initial version
+     * @deprecated 1.0.5
      */
     public static function isSerializedArray($data)
     {
         return $data === null || (is_string($data) && preg_match('/^a:[0-9]+:{.*;}$/s', $data));
+    }
+
+    /**
+     * Check for JSON encoded data.
+     *
+     * @param string $data JSON encoded data to validate.
+     *
+     * @return bool Validity is ok or not
+     *
+     * @since   1.0.4
+     * @version 1.0.4 Initial version
+     */
+    public static function isJSON($data)
+    {
+        json_decode($data);
+
+        return (json_last_error() === JSON_ERROR_NONE);
     }
 
     /**

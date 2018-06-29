@@ -13,12 +13,20 @@ class AdminCustomCodeControllerCore extends AdminController
      * AdminCustomCodeControllerCore constructor.
      *
      * @since 1.0.0
+     * @throws PrestaShopException
      */
     public function __construct()
     {
         $this->className = 'Configuration';
         $this->table = 'configuration';
         $this->bootstrap = true;
+
+        $this->updateOptionTbCustomcodeJs();
+        $this->updateOptionTbCustomcodeOrderconfJs();
+
+        if (Configuration::get('PS_USE_HTMLPURIFIER')) {
+            $this->warnings[] = $this->l('Note that the HTMLPurifier library has been activated. Not all HTML tags will be accepted.');
+        }
 
         $fields = [
             Configuration::CUSTOMCODE_METAS => [
@@ -50,6 +58,8 @@ class AdminCustomCodeControllerCore extends AdminController
                 'enableSnippets'            => true,
                 'enableLiveAutocompletion'  => true,
                 'visibility'                => Shop::CONTEXT_ALL,
+                'auto_value'                => false,
+                'value'                     => Configuration::get(Configuration::CUSTOMCODE_JS),
             ],
         ];
 
@@ -63,6 +73,8 @@ class AdminCustomCodeControllerCore extends AdminController
                 'enableSnippets'            => true,
                 'enableLiveAutocompletion'  => true,
                 'visibility'                => Shop::CONTEXT_ALL,
+                'auto_value'                => false,
+                'value'                     => Configuration::get(Configuration::CUSTOMCODE_ORDERCONF_JS),
             ],
         ];
 
@@ -70,7 +82,7 @@ class AdminCustomCodeControllerCore extends AdminController
             'general' => [
                 'title'       => $this->l('General'),
                 'icon'        => 'icon-cogs',
-                'description' => $this->l('On this page you can add extra HTML between the &lt;head&gt; tags, extra CSS or JavaScript to your pages. JavaScript should NOT be enclosed with &lt;script&gt; tags. This is done by thirty bees already.', null, false, false).((Configuration::get('PS_USE_HTMLPURIFIER') ? '<br><strong>'.$this->l('Note that the HTMLPurifier library has been activated. Not all HTML tags will be accepted.').'</strong>' : '')),
+                'description' => $this->l('On this page you can add extra HTML between the &lt;head&gt; tags, extra CSS or JavaScript to your pages. JavaScript should NOT be enclosed with &lt;script&gt; tags. This is done by thirty bees already.', null, false, false),
                 'fields'      => $fields,
                 'submit'      => ['title' => $this->l('Save')],
             ],
@@ -86,4 +98,151 @@ class AdminCustomCodeControllerCore extends AdminController
         parent::__construct();
     }
 
+    /**
+     * @throws PrestaShopException
+     */
+    public function updateOptionTbCustomcodeMetas()
+    {
+        if (!Tools::isSubmit(Configuration::CUSTOMCODE_METAS)) {
+            return;
+        }
+
+        static $called = false;
+        if ($called) {
+            return;
+        }
+        $called = true;
+
+        $this->updateOptionUnescaped(Configuration::CUSTOMCODE_METAS, Tools::getValue(Configuration::CUSTOMCODE_METAS));
+    }
+
+    /**
+     * @throws PrestaShopException
+     */
+    public function updateOptionTbCustomcodeCss()
+    {
+        if (!Tools::isSubmit(Configuration::CUSTOMCODE_CSS)) {
+            return;
+        }
+
+        static $called = false;
+        if ($called) {
+            return;
+        }
+        $called = true;
+
+        $this->updateOptionUnescaped(Configuration::CUSTOMCODE_CSS, Tools::getValue(Configuration::CUSTOMCODE_CSS));
+    }
+
+    /**
+     * @throws PrestaShopException
+     */
+    public function updateOptionTbCustomcodeOrderconfJs()
+    {
+        if (!Tools::isSubmit(Configuration::CUSTOMCODE_ORDERCONF_JS)) {
+            return;
+        }
+
+        static $called = false;
+        if ($called) {
+            return;
+        }
+        $called = true;
+
+        $this->updateOptionUnescaped(Configuration::CUSTOMCODE_ORDERCONF_JS, Tools::getValue(Configuration::CUSTOMCODE_ORDERCONF_JS));
+    }
+
+    /**
+     * @throws PrestaShopException
+     */
+    public function updateOptionTbCustomcodeJs()
+    {
+        if (!Tools::isSubmit(Configuration::CUSTOMCODE_JS)) {
+            return;
+        }
+
+        static $called = false;
+        if ($called) {
+            return;
+        }
+        $called = true;
+
+        $this->updateOptionUnescaped(Configuration::CUSTOMCODE_JS, Tools::getValue(Configuration::CUSTOMCODE_JS));
+    }
+
+    /**
+     * @param string $key
+     * @param string $value
+     *
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
+    protected function updateOptionUnescaped($key, $value)
+    {
+        if (Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
+            (new DbQuery())
+                ->select('`'.bqSQL(Configuration::$definition['primary']).'`')
+                ->from(bqSQL(Configuration::$definition['table']))
+                ->where('`id_shop` IS NULL AND `id_shop_group` IS NULL AND `name` = \''.pSQL($key).'\'')
+        )) {
+            Db::getInstance()->update(
+                bqSQL(Configuration::$definition['table']),
+                [
+                    'value'    => pSQL($value),
+                    'date_upd' => ['type' => 'sql', 'value' => 'NOW()'],
+                ],
+                '`id_shop` IS NULL AND `id_shop_group` IS NULL AND `name` = \''.pSQL($key).'\'',
+                0,
+                true
+            );
+        } else {
+            Db::getInstance()->insert(
+                bqSQL(Configuration::$definition['table']),
+                [
+                    'name'          => pSQL($key),
+                    'value'         => pSQL($value),
+                    'id_shop'       => null,
+                    'id_shop_group' => null,
+                    'date_add'      => ['type' => 'sql', 'value' => 'NOW()'],
+                    'date_upd'      => ['type' => 'sql', 'value' => 'NOW()'],
+                ],
+                true
+            );
+        }
+        Configuration::set($key, $value, null, null);
+        foreach (Shop::getContextListShopID() as $idShop) {
+            $idShopGroup = Shop::getGroupFromShop($idShop, true);
+            if (Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
+                (new DbQuery())
+                    ->select('`'.bqSQL(Configuration::$definition['primary']).'`')
+                    ->from(bqSQL(Configuration::$definition['table']))
+                    ->where('`id_shop` = '.(int) $idShop.' AND `id_shop_group` = '.(int) $idShopGroup.' AND `name` = \''.pSQL($key).'\'')
+            )) {
+                Db::getInstance()->update(
+                    bqSQL(Configuration::$definition['table']),
+                    [
+                        'value'    => pSQL($value),
+                        'date_upd' => ['type' => 'sql', 'value' => 'NOW()'],
+                    ],
+                    '`id_shop` = '.(int) $idShop.' AND `id_shop_group` = '.$idShopGroup.' AND `name` = \''.pSQL($key).'\'',
+                    0,
+                    true
+                );
+            } else {
+                Db::getInstance()->insert(
+                    bqSQL(Configuration::$definition['table']),
+                    [
+                        'name'          => pSQL($key),
+                        'value'         => pSQL($value),
+                        'id_shop'       => $idShop,
+                        'id_shop_group' => $idShopGroup,
+                        'date_add'      => ['type' => 'sql', 'value' => 'NOW()'],
+                        'date_upd'      => ['type' => 'sql', 'value' => 'NOW()'],
+                    ],
+                    true
+                );
+            }
+            Configuration::set($key, $value, $idShopGroup, $idShop);
+        }
+    }
 }
